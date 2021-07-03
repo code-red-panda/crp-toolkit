@@ -7,7 +7,7 @@ import pymysql.cursors
 import os.path
 from time import gmtime, strftime, sleep, time
 from prettytable import PrettyTable
-
+from crptoolkit import crplogger
 
 def mysql_options():
     parser = argparse.ArgumentParser()
@@ -252,7 +252,8 @@ def mysql_set_buffer_pool_dump():
 
 
 def mysql_prepare_shutdown():
-    info("[ START ] Preparing MySQL for shutdown.")
+    logger = crplogger.Logger()
+    logger.info("[ START ] Preparing MySQL for shutdown.")
     # Check if the host is a replica.
     is_replica = int(mysql_check_is_replica())
     if is_replica:
