@@ -1,16 +1,24 @@
 from time import gmtime, strftime
 
 class Logger:
+
+    def __init__(self, verbose_info):
+        self.verbose_info = verbose_info
+
     def info(self, message):
-        print(strftime("%Y-%m-%d %H:%M:%S", gmtime()) + " >>> %s" % message)
+        datetime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        print(f"{datetime} >>> {message}")
 
     def verbose(self, message):
-        if options.verbose:
-            print(strftime("%Y-%m-%d %H:%M:%S", gmtime()) + " >>> %s" % message)
+        if self.verbose_info:
+            datetime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+            print(f"{datetime} >>> {message}")
 
     def warn(self, message):
-        print(strftime("%Y-%m-%d %H:%M:%S", gmtime()) + " >>> [ WARNING ] %s" % message)
+        datetime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        print(f"{datetime} >>> [ WARNING ] {message}")
 
     def error(self, message):
-        print(strftime("%Y-%m-%d %H:%M:%S", gmtime()) + " >>> [ CRITICAL ] %s" % message)
+        datetime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        print(f"{datetime} >>> [ CRITICAL ] {message}")
         exit(1)
