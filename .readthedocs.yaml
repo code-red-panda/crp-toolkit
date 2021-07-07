@@ -3,11 +3,6 @@ version: 2
 mkdocs:
   configuration: mkdocs.yml
 
-markdown_extensions:
-    - toc:
-        permalink:
-        baselevel: 6
-
 python:
    version: 3.8
    install:
