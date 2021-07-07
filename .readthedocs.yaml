@@ -4,12 +4,12 @@ mkdocs:
   configuration: mkdocs.yml
 
 markdown_extensions:
-  - toc:
-    permalink: True
-    baselevel: 6
+    - toc:
+        permalink:
+        baselevel: 6
 
 python:
-  version: 3.8
-  install:
-    - requirements: docs/requirements.txt
-  system_packages: true
+   version: 3.8
+   install:
+     - requirements: docs/requirements.txt
+   system_packages: true
