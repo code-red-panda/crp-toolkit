@@ -1,0 +1,6 @@
+site_name: CRP Toolkit
+site_url: https://example.com/
+nav:
+    - Home: index.md
+    - crp-prepare-shutdown: crp-prepare-shutdown.md
+theme: readthedocs
