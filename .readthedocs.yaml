@@ -5,7 +5,7 @@ mkdocs:
 
 markdown_extensions:
     - toc:
-	permalink:
+	permalink: True
         baselevel: 6
 
 python:
