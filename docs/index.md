@@ -1,10 +1,8 @@
 # CRP Toolkit
 
-## Download
+## Download & Installation
 
-Github: [CRP Toolkit](https://github.com/code-red-panda/crp-toolkit) 
-DEB
-RPM
+Download the latest release on [Github](https://github.com/code-red-panda/crp-toolkit/releases/latest)
 
 ## Tools
 
@@ -12,10 +10,4 @@ RPM
 
 ## Releases
 
-### For MySQL 8.0.22+
-
-- v8.0.1
-
-### For MySQL 5.7.X+
-
-- v5.7.1
+- [v0.0.1 (Jul 7, 2021)](https://github.com/code-red-panda/crp-toolkit/releases/tag/v0.0.1)
