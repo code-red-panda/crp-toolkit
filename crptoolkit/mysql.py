@@ -13,27 +13,46 @@ class MySQL:
         self.socket = socket
 
     def connect(self):
+        """
+        Attempts to connect to MySQL
+        Returns boolean,error message (if any)
+        """
         if self.defaults_file is not None:
-            self.connection = pymysql.connect(
-                    read_default_file=self.defaults_file
-                    )
-            return self.connection
+            try:
+                self.connection = pymysql.connect(
+                        read_default_file=self.defaults_file
+                        )
+                return True, None
+            except pymysql.Error as error:
+                message = f"{error.args[0]}: {error.args[1]}"
+                return False, message
         if self.socket is not None:
-            self.connection = pymysql.connect(
+            try:
+                self.connection = pymysql.connect(
                     host = self.host,
                     port = self.port,
                     user = self.user,
                     password = self.password,
                     unix_socket = self.socket
                     )
-            return self.connection
-        self.connection = pymysql.connect(
-                host = self.host,
-                port = self.port,
-                user = self.user,
-                password = self.password
-                )
-        return self.connection
+                return True, None
+            except pymysql.Error as error:
+                message = f"{error.args[0]}: {error.args[1]}"
+                return False, message
+        try:
+            self.connection = pymysql.connect(
+                    host = self.host,
+                    port = self.port,
+                    user = self.user,
+                    password = self.password
+                    )
+            return True, None
+        except pymysql.Error as error:
+            message = f"{error.args[0]}: {error.args[1]}"
+            return False, message
+
+    def close(self):
+        pymysql.close()
 
     def run_query(self, sql, cursorclass = pymysql.cursors.DictCursor):
         """
@@ -72,40 +91,34 @@ class MySQL:
         result = self.run_query(sql)
         return result[0]['Value']
 
+    def replication_status(self):
+        sql = "SHOW REPLICA STATUS"
+        return self.run_query(sql)
+
     def is_replica(self):
         """
-        Checks show slave status
+        Checks show replica status
         Returns boolean
         """
-        sql = "SHOW SLAVE STATUS"
-        if not self.run_query(sql):
-            return False
-        return True
+        is_replica = False if not self.replication_status() else True
+        return is_replica
 
-    def replica_status(self):
-        print('hi')
+    def stop_replication_io_thread(self, slave_parallel_workers = False):
+        sql = "STOP REPLICA IO_thread"
+        self.mysql.run_query(sql)
 
-    def stop_replication(self):
-        sql = "SHOW SLAVE STATUS"
-        result = self.run_query(sql)
-        if (slave_io_running := result["Slave_IO_Running"]) == "Yes":
-            sql = "STOP SLAVE IO_THREAD"
-            self.run_query(sql)
-        else:
-            verbose("IO thread was already stopped.")
-        if (slave_sql_running := result["Slave_SQL_Running"]) == "Yes":
-            verbose("Giving the SQL thread 10 seconds to catch up.")
-            sleep(10)
-            verbose("Stopping SQL thread.")
-            sql = "STOP SLAVE SQL_thread"
-            self.run_query(sql)
-        else:
-            verbose("SQL thread was already stopped.")
-        if slave_io_running == "No" and slave_sql_running == "No":
-            warn("Replication was already stopped.")
+    def stop_replication_sql_thread(self):
+        sql = "STOP REPLICA SQL_thread"
+        self.mysql.run_query(sql)
+
+    def stop_replication_mtr(self):
+        #STOP SLAVE;
+        #START SLAVE UNTIL SQL_AFTER_MTS_GAPS;
+        #STOP SLAVE;
+        return None
 
     def start_replication(self):
-        sql = ("START SLAVE")
+        sql = ("START REPLICA")
         self.run_query(sql)
         # What to return?
 
