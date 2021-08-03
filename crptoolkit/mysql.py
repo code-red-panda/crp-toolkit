@@ -74,13 +74,16 @@ class MySQL:
         result = self.run_query(sql)
         return result[0]['Value']
 
-    def set_variable(self, variable_name, variable_value):
+    def set_variable(self, variable_name, variable_value, persist=False):
         """
         Sets value of a MySQL variable
         Returns boolean
         """
         sql = f"SET GLOBAL {variable_name} = {variable_value}"
         self.run_query(sql)
+        if persist:
+            sql = f"SET PERSIST {variable_name} = {variable_value}"
+            self.run_query(sql)
 
     def get_status_variable(self, variable_name):
         """
@@ -103,13 +106,13 @@ class MySQL:
         is_replica = False if not self.replication_status() else True
         return is_replica
 
-    def stop_replication_io_thread(self, slave_parallel_workers = False):
+    def stop_replication_io_thread(self):
         sql = "STOP REPLICA IO_thread"
-        self.mysql.run_query(sql)
+        self.run_query(sql)
 
     def stop_replication_sql_thread(self):
         sql = "STOP REPLICA SQL_thread"
-        self.mysql.run_query(sql)
+        self.run_query(sql)
 
     def stop_replication_mtr(self):
         #STOP SLAVE;
@@ -120,7 +123,6 @@ class MySQL:
     def start_replication(self):
         sql = ("START REPLICA")
         self.run_query(sql)
-        # What to return?
 
     def get_transactions(self, duration):
         """

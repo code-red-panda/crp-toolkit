@@ -5,14 +5,14 @@ class Logger:
     def __init__(self, verbose_info):
         self.verbose_info = verbose_info
 
-    def info(self, message):
+    def info(self, message, flag="INFO"):
         datetime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-        print(f"{datetime} >>> {message}")
+        print(f"{datetime} >>> [ {flag} ] {message}")
 
-    def verbose(self, message):
+    def verbose(self, message, flag="INFO"):
         if self.verbose_info:
             datetime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-            print(f"{datetime} >>> {message}")
+            print(f"{datetime} >>> [ {flag} ] {message}")
 
     def warn(self, message):
         datetime = strftime("%Y-%m-%d %H:%M:%S", gmtime())

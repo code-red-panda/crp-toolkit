@@ -25,38 +25,39 @@ class MySQLPrepareShutdown:
 
     def __init__(self, args):
         self.args = ArgParser(args)
-        self.no_transaction_check = args.no_transaction_check
-        self.verbose = args.verbose
         self.defaults_file, self.host, self.port, self.user, self.password, self.socket = self.args.connect()
         self.mysql = MySQL(self.defaults_file, self.host, self.port, self.user, self.password, self.socket)
         self.connect = self.mysql.connect()
-        self.log = Logger(self.verbose)
+        self.log = Logger(args.verbose)
 
     def run(self):
-        self.log.info("[ START ] Preparing MySQL for shutdown.")
+        self.log.info("Preparing MySQL for shutdown.", "START")
 
-        # If it's a replica, stop replication
-        self.log.info("Checking if this is a replica.")
+        self.log.verbose("Checking if this is a replica.")
         if (is_replica := self.mysql.is_replica()):
             self.log.info("This is a replica. Stopping replication.")
-            if int(self.mysql.get_variable("slave_parallel_workers")) == 0:
+            if int(self.mysql.get_variable("slave_parallel_workers")) > 0:
                 self.log.error("This is a multi-threaded replica.")
             else:
-                self.mysql.stop_replication()
-                self.log.verbose("Replication stopped.")
+                self.log.verbose("Stopping IO thread.")
+                self.mysql.stop_replication_io_thread()
+                self.log.verbose("Giving SQL thread 10 seconds to catch up.")
+                sleep(10)
+                self.log.verbose("Stopping SQL thread.")
+                self.mysql.stop_replication_sql_thread()
+            self.log.info("Replication stopped.")
 
-        # Check for long running transactions
-        if self.no_transaction_check:
+        if args.no_transaction_check:
             self.log.warn("--no-transaction-check was used. Not checking for long running transactions.")
         else:
-            self.log.info("Checking for transactions running > 60s.")
+            self.log.verbose("Checking for transactions running > 60s.")
             if self.mysql.get_transactions(60):
                 if is_replica:
-                    self.log.info("Restarting replication because of a problem.")
+                    self.log.warn("Restarting replication.")
                     self.mysql.start_replication()
                 self.log.error("Transaction(s) found running > 60 seconds. COMMIT, ROLLBACK, or kill them. Otherwise, use the less safe `--no-transaction-check`.")
+            self.log.info("No transactions found running > 60 seconds.")
 
-        # Set dirty pages to 0 then check they are low enough
         dirty_pages_pct_original = float(self.mysql.get_variable("innodb_max_dirty_pages_pct"))
         dirty_pages_start = int(self.mysql.get_status_variable("Innodb_buffer_pool_pages_dirty"))
         self.log.info("Setting innodb_max_dirty_pages_pct -> 0.0.")
@@ -75,32 +76,32 @@ class MySQLPrepareShutdown:
                     self.log.verbose("Dirty pages < 500. Continuing to prepare for shutdown.")
                     break
                 elif time() > timeout:
-                    self.log.warn("It's been 1 minute. Dirty pages may still be high but continuing to prepare for shutdown.")
+                    self.log.warn("Its been 1 minute. Dirty pages may still be high. Continuing to prepare for shutdown.")
                     break
                 else:
-                    self.log.info(f"Dirty pages = {dirty_pages_current}, waiting (up to 1 minute) for it to lower.")
-                    sleep(1)
+                    self.log.info(f"Dirty pages = {dirty_pages_current}, waiting up to 1 minute for it to lower.")
+                    sleep(5)
         except KeyboardInterrupt:
             self.mysql.set_variable("innodb_max_dirty_pages_pct", dirty_pages_pct_original)
             if is_replica:
-                self.log.info("Restarting replication because of a problem.")
+                self.log.warn("Restarting replication.")
                 self.mysql.start_replication()
                 self.log.error("Received CTL+C. Reverted innodb_max_dirty_pages_pct and restarted replication before exiting.")
             self.log.error("Received CTL+C. Reverted innodb_max_dirty_pages_pct before exiting.")
-    
-        # Set fast shutdown to 0
+
         self.log.info("Setting innodb_fast_shutdown -> 0.")
         self.mysql.set_variable("innodb_fast_shutdown", 0)
 
-        # Set buffer pool dump configurations
-        self.log.info("Setting innodb_buffer_pool_dump_at_shutdown -> ON.")
-        self.mysql.set_variable("innodb_buffer_pool_dump_at_shutdown", "ON")
+        self.log.info("Setting innodb_buffer_pool_dump_at_shutdown -> 1.")
+        self.mysql.set_variable("innodb_buffer_pool_dump_at_shutdown", 1)
+
         self.log.info("Setting innodb_buffer_pool_dump_pct -> 75.")
         self.mysql.set_variable("innodb_buffer_pool_dump_pct", 75)
-        if self.mysql.get_variable("innodb_buffer_pool_load_at_startup") == "OFF":
-            self.log.warn("innodb_buffer_pool_load_at_startup = OFF. You may want to enable this in the my.cnf: innodb_buffer_pool_load_at_startup = ON")
 
-        self.log.info("[ COMPLETED ] MySQL is prepared for shutdown!")
+        if self.mysql.get_variable("innodb_buffer_pool_load_at_startup") == 0:
+            self.log.warn("innodb_buffer_pool_load_at_startup = 0. You may want to enable this in the my.cnf: innodb_buffer_pool_load_at_startup = ON")
+
+        self.log.info("MySQL is prepared for shutdown!", "COMPLETED")
 
 if __name__ == "__main__":
     args = args()
