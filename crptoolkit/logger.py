@@ -22,3 +22,9 @@ class Logger:
         datetime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
         print(f"{datetime} >>> [ CRITICAL ] {message}")
         exit(1)
+
+    def no_timestamp(self, message):
+        print(message)
+
+    def newline(self):
+        print("\n")
