@@ -35,7 +35,18 @@ class MySQL:
                 )
         return self.connection
 
-    def run_query(self, sql, cursorclass = pymysql.cursors.DictCursor):
+    def prettytable(self, rows):
+        """
+        Takes MySQL rows as tuple of dictionaries
+        Returns pretty formatted table
+        """
+        prettytable = PrettyTable(rows[0].keys())
+        prettytable.align = "l"
+        for row in rows:
+            prettytable.add_row(list(row.values()))
+        return prettytable
+
+    def run_query(self, sql, cursorclass = pymysql.cursors.DictCursor, prettytable = False, selectone = False):
         """
         Executes SQL and retreives result
         Returns all rows (formatted by cursor class)
@@ -44,6 +55,12 @@ class MySQL:
             cursor.execute(sql)
             result = cursor.fetchall()
         cursor.close()
+        if selectone:
+            return False if not result else True
+        if not result:
+            return "Empty set (0.00 sec)"
+        if prettytable:
+            return self.prettytable(result)
         return result
 
     def get_variable(self, variable_name):
