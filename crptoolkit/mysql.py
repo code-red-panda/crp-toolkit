@@ -1,6 +1,7 @@
 import pymysql.cursors
 from prettytable import PrettyTable
 
+
 class MySQL:
 
     def __init__(self, defaults_file, host, port, user, password, socket):
@@ -20,8 +21,8 @@ class MySQL:
         if self.defaults_file is not None:
             try:
                 self.connection = pymysql.connect(
-                        read_default_file=self.defaults_file
-                        )
+                    read_default_file=self.defaults_file
+                )
                 return True, None
             except pymysql.Error as error:
                 message = f"{error.args[0]}: {error.args[1]}"
@@ -29,34 +30,35 @@ class MySQL:
         if self.socket is not None:
             try:
                 self.connection = pymysql.connect(
-                    host = self.host,
-                    port = self.port,
-                    user = self.user,
-                    password = self.password,
-                    unix_socket = self.socket
-                    )
+                    host=self.host,
+                    port=self.port,
+                    user=self.user,
+                    password=self.password,
+                    unix_socket=self.socket
+                )
                 return True, None
             except pymysql.Error as error:
                 message = f"{error.args[0]}: {error.args[1]}"
                 return False, message
         try:
             self.connection = pymysql.connect(
-                    host = self.host,
-                    port = self.port,
-                    user = self.user,
-                    password = self.password
-                    )
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password
+            )
             return True, None
         except pymysql.Error as error:
             message = f"{error.args[0]}: {error.args[1]}"
             return False, message
 
-    def close(self):
-        pymysql.close()
+    @staticmethod
+    def close():
+        pymysql.connect.close()
 
-    def run_query(self, sql, cursorclass = pymysql.cursors.DictCursor):
+    def run_query(self, sql, cursorclass=pymysql.cursors.DictCursor):
         """
-        Executes SQL and retreives result
+        Executes SQL and retrieves result
         Returns all rows (formatted by cursor class)
         """
         with self.connection.cursor(cursorclass) as cursor:
@@ -115,13 +117,13 @@ class MySQL:
         self.run_query(sql)
 
     def stop_replication_mtr(self):
-        #STOP SLAVE;
-        #START SLAVE UNTIL SQL_AFTER_MTS_GAPS;
-        #STOP SLAVE;
+        # STOP SLAVE;
+        # START SLAVE UNTIL SQL_AFTER_MTS_GAPS;
+        # STOP SLAVE;
         return None
 
     def start_replication(self):
-        sql = ("START REPLICA")
+        sql = "START REPLICA"
         self.run_query(sql)
 
     def get_transactions(self, duration):
@@ -129,11 +131,17 @@ class MySQL:
         Gets MySQL transactions running > {duration} seconds
         Returns pretty printed table
         """
-        sql = f"SELECT trx_id, trx_started, (NOW() - trx_started) trx_duration_seconds, id processlist_id, user, IF(LEFT(HOST, (LOCATE(':', host) - 1)) = '', host, LEFT(HOST, (LOCATE(':', host) - 1))) host, command, time, REPLACE(SUBSTRING(info,1,25),'\n','') info_25 FROM information_schema.innodb_trx JOIN information_schema.processlist ON innodb_trx.trx_mysql_thread_id = processlist.id WHERE (NOW() - trx_started) > {duration} ORDER BY trx_started"
+        sql = f"""
+        SELECT trx_id, trx_started, (NOW() - trx_started) trx_duration_seconds, id processlist_id, user, 
+        IF(LEFT(HOST, (LOCATE(':', host) - 1)) = '', host, LEFT(HOST, (LOCATE(':', host) - 1))) host, command, 
+        time, REPLACE(SUBSTRING(info,1,25),'\n','') info_25 FROM information_schema.innodb_trx 
+        JOIN information_schema.processlist ON innodb_trx.trx_mysql_thread_id = processlist.id 
+        WHERE (NOW() - trx_started) > {duration} ORDER BY trx_started
+        """
         if not (result := self.run_query(sql)):
             return False
         else:
-            table = PrettyTable(result[0].keys(), align = "l")
+            table = PrettyTable(result[0].keys(), align="l")
             for rows in result:
                 table.add_row(list(rows.values()))
             print(table)

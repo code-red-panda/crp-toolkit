@@ -2,9 +2,10 @@
 
 import argparse
 from time import sleep, time
-from crptoolkit.args import ArgParser
+from crptoolkit.argparser import ArgParser
 from crptoolkit.logger import Logger
 from crptoolkit.mysql import MySQL
+
 
 def args():
     parser = argparse.ArgumentParser()
@@ -18,8 +19,10 @@ def args():
     parser.add_argument("--defaults-file", dest="defaults_file", metavar="FILE", help="Use MySQL configuration file")
     parser.add_argument("-t", "--no-transaction-check", action="store_true", dest="no_transaction_check",
                         help="Do not check for transactions > 60 seconds")
-    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="Print additional tool information")
+    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true",
+                        help="Print additional tool information")
     return parser.parse_args()
+
 
 class MySQLPrepareShutdown:
 
@@ -34,7 +37,7 @@ class MySQLPrepareShutdown:
         self.log.info("Preparing MySQL for shutdown.", "START")
 
         self.log.verbose("Checking if this is a replica.")
-        if (is_replica := self.mysql.is_replica()):
+        if is_replica := self.mysql.is_replica():
             self.log.info("This is a replica. Stopping replication.")
             if int(self.mysql.get_variable("slave_parallel_workers")) > 0:
                 self.log.error("This is a multi-threaded replica.")
@@ -55,7 +58,8 @@ class MySQLPrepareShutdown:
                 if is_replica:
                     self.log.warn("Restarting replication.")
                     self.mysql.start_replication()
-                self.log.error("Transaction(s) found running > 60 seconds. COMMIT, ROLLBACK, or kill them. Otherwise, use the less safe `--no-transaction-check`.")
+                self.log.error("Transaction(s) found running > 60 seconds. COMMIT, ROLLBACK, or kill them. "
+                               "Otherwise, use the less safe `--no-transaction-check`.")
             self.log.info("No transactions found running > 60 seconds.")
 
         dirty_pages_pct_original = float(self.mysql.get_variable("innodb_max_dirty_pages_pct"))
@@ -76,7 +80,8 @@ class MySQLPrepareShutdown:
                     self.log.verbose("Dirty pages < 500. Continuing to prepare for shutdown.")
                     break
                 elif time() > timeout:
-                    self.log.warn("Its been 1 minute. Dirty pages may still be high. Continuing to prepare for shutdown.")
+                    self.log.warn("Its been 1 minute. Dirty pages may still be high. "
+                                  "Continuing to prepare for shutdown.")
                     break
                 else:
                     self.log.info(f"Dirty pages = {dirty_pages_current}, waiting up to 1 minute for it to lower.")
@@ -86,7 +91,8 @@ class MySQLPrepareShutdown:
             if is_replica:
                 self.log.warn("Restarting replication.")
                 self.mysql.start_replication()
-                self.log.error("Received CTL+C. Reverted innodb_max_dirty_pages_pct and restarted replication before exiting.")
+                self.log.error("Received CTL+C. "
+                               "Reverted innodb_max_dirty_pages_pct and restarted replication before exiting.")
             self.log.error("Received CTL+C. Reverted innodb_max_dirty_pages_pct before exiting.")
 
         self.log.info("Setting innodb_fast_shutdown -> 0.")
@@ -99,10 +105,13 @@ class MySQLPrepareShutdown:
         self.mysql.set_variable("innodb_buffer_pool_dump_pct", 75)
 
         if self.mysql.get_variable("innodb_buffer_pool_load_at_startup") == 0:
-            self.log.warn("innodb_buffer_pool_load_at_startup = 0. You may want to enable this in the my.cnf: innodb_buffer_pool_load_at_startup = ON")
+            self.log.warn("innodb_buffer_pool_load_at_startup = 0. "
+                          "You may want to enable this in the my.cnf: innodb_buffer_pool_load_at_startup = ON")
 
         self.log.info("MySQL is prepared for shutdown!", "COMPLETED")
 
+
 if __name__ == "__main__":
     args = args()
-    MySQLPrepareShutdown(args).run()
+    shutdown = MySQLPrepareShutdown(args)
+    shutdown.run()
